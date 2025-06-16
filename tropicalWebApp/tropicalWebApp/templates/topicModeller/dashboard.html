@@ -1,0 +1,260 @@
+<!-- templates/topicModeller/dashboard.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Dashboard</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Quick Stats -->
+    <div class="col-md-3 mb-4">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title text-muted mb-0">Total Datasets</h5>
+                        <h2 class="mb-0">{{ totalDatasets }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-database fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title text-muted mb-0">Preprocessed Datasets</h5>
+                        <h2 class="mb-0">{{ preprocessedDatasets }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title text-muted mb-0">Training Runs</h5>
+                        <h2 class="mb-0">{{ totalTrainingRuns }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-brain fa-2x text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title text-muted mb-0">Completed Models</h5>
+                        <h2 class="mb-0">{{ completedTrainingRuns }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-trophy fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Training Runs -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Training Runs</h5>
+                <a href="{% url 'trainingList' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recentTrainingRuns %}
+                    <div class="list-group list-group-flush">
+                        {% for run in recentTrainingRuns %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ run.runName }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ run.dataset.name }} - {{ run.createdAt|date:"M d, Y" }}</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge status-badge {% if run.status == 'completed' %}bg-success{% elif run.status == 'running' %}bg-primary{% elif run.status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {{ run.status|capfirst }}
+                                        </span>
+                                    </div>
+                                </div>
+                                {% if run.status == 'completed' and run.finalLoss %}
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            Loss: {{ run.finalLoss|floatformat:4 }}
+                                            {% if run.coherenceScore %}| Coherence: {{ run.coherenceScore|floatformat:4 }}{% endif %}
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No training runs yet.</p>
+                    <a href="{% url 'trainingNew' %}" class="btn btn-primary">Start Training</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Datasets -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Datasets</h5>
+                <a href="{% url 'datasetList' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if datasets %}
+                    <div class="list-group list-group-flush">
+                        {% for dataset in datasets|slice:":5" %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ dataset.name }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ dataset.createdAt|date:"M d, Y" }}</small>
+                                </div>
+                                <div>
+                                    {% if dataset.isPreprocessed %}
+                                        <span class="badge bg-success">Preprocessed</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Not Preprocessed</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No datasets uploaded yet.</p>
+                    <a href="{% url 'datasetUpload' %}" class="btn btn-primary">Upload First Dataset</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-upload fa-3x text-primary mb-3"></i>
+                                <h6 class="card-title">Upload Dataset</h6>
+                                <p class="card-text small">Upload and preprocess a new dataset for training.</p>
+                                <a href="{% url 'datasetUpload' %}" class="btn btn-primary">Upload</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-cut fa-3x text-info mb-3"></i>
+                                <h6 class="card-title">Split Dataset</h6>
+                                <p class="card-text small">Split training data into 80% train and 20% validation.</p>
+                                <a href="{% url 'PARQUETSplitter' %}" class="btn btn-info">Split</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-play fa-3x text-success mb-3"></i>
+                                <h6 class="card-title">Start Training</h6>
+                                <p class="card-text small">Train a new model from scratch with your data.</p>
+                                <a href="{% url 'trainingNew' %}" class="btn btn-success">Train</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-eye fa-3x text-warning mb-3"></i>
+                                <h6 class="card-title">Visualise Topics</h6>
+                                <p class="card-text small">Run topic inference on datasets using trained models.</p>
+                                <a href="{% url 'visualiseTopics' %}" class="btn btn-warning">Visualise</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Quick Links -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Model Management</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'viewModels' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-brain me-2"></i>View All Models
+                    </a>
+                    <a href="{% url 'enhancedModelLoad' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-folder-open me-2"></i>Load Existing Model
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">System Status</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <i class="fas fa-server fa-2x text-success mb-2"></i>
+                        <p class="small mb-0">System Online</p>
+                    </div>
+                    <div class="col-4">
+                        <i class="fas fa-database fa-2x text-primary mb-2"></i>
+                        <p class="small mb-0">DB Connected</p>
+                    </div>
+                    <div class="col-4">
+                        <i class="fas fa-brain fa-2x text-info mb-2"></i>
+                        <p class="small mb-0">Models Ready</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

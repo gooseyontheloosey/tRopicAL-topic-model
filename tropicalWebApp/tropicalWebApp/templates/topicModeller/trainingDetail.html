@@ -1,0 +1,318 @@
+<!-- templates/topicModeller/trainingDetail.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block page_title %}Training Run Details{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'trainingList' %}">Training Runs</a></li>
+<li class="breadcrumb-item active">{{ trainingRun.runName }}</li>
+{% endblock %}
+
+{% block toolbar %}
+<a href="{% url 'trainingList' %}" class="btn btn-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Back to Training Runs
+</a>
+{% if trainingRun.status == 'completed' %}
+    <a href="{% url 'enhancedModelLoad' %}" class="btn btn-primary">
+        <i class="fas fa-folder-open me-1"></i>Load This Model
+    </a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Training Information -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-brain me-2"></i>Training Run Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">Run Name:</dt>
+                            <dd class="col-sm-7">{{ trainingRun.runName }}</dd>
+                            
+                            <dt class="col-sm-5">Dataset:</dt>
+                            <dd class="col-sm-7">
+                                <a href="{% url 'datasetDetail' trainingRun.dataset.pk %}">{{ trainingRun.dataset.name }}</a>
+                            </dd>
+                            
+                            <dt class="col-sm-5">Status:</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge {% if trainingRun.status == 'completed' %}bg-success{% elif trainingRun.status == 'running' %}bg-primary{% elif trainingRun.status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {{ trainingRun.status|capfirst }}
+                                </span>
+                            </dd>
+                            
+                            <dt class="col-sm-5">Created:</dt>
+                            <dd class="col-sm-7">{{ trainingRun.createdAt|date:"d/m/Y H:i:s" }}</dd>
+                            
+                            {% if trainingRun.completedAt %}
+                                <dt class="col-sm-5">Completed:</dt>
+                                <dd class="col-sm-7">{{ trainingRun.completedAt|date:"d/m/Y H:i:s" }}</dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">Architecture:</dt>
+                            <dd class="col-sm-7">
+                                <span class="font-monospace">
+                                    {{ trainingRun.hiddenDim1Size }} - {{ trainingRun.hiddenDim2Size }} - {{ trainingRun.latentDimSize }}
+                                </span>
+                            </dd>
+                            
+                            <dt class="col-sm-5">Epochs:</dt>
+                            <dd class="col-sm-7">{{ trainingRun.numEpochs }}</dd>
+                            
+                            {% if trainingRun.finalLoss %}
+                                <dt class="col-sm-5">Final Loss:</dt>
+                                <dd class="col-sm-7">
+                                    <span class="font-monospace">{{ trainingRun.finalLoss|floatformat:6 }}</span>
+                                </dd>
+                            {% endif %}
+                            
+                            {% if trainingRun.coherenceScore %}
+                                <dt class="col-sm-5">Coherence:</dt>
+                                <dd class="col-sm-7">
+                                    <span class="font-monospace">{{ trainingRun.coherenceScore|floatformat:6 }}</span>
+                                </dd>
+                            {% endif %}
+                            
+                            {% if trainingRun.diversityScore %}
+                                <dt class="col-sm-5">Diversity:</dt>
+                                <dd class="col-sm-7">
+                                    <span class="font-monospace">{{ trainingRun.diversityScore|floatformat:6 }}</span>
+                                </dd>
+                            {% endif %}
+                            
+                            {% if trainingRun.modelPath %}
+                                <dt class="col-sm-5">Model Path:</dt>
+                                <dd class="col-sm-7">
+                                    <small class="font-monospace text-muted">{{ trainingRun.modelPath|truncatechars:50 }}</small>
+                                </dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if trainingRun.status == 'completed' %}
+            <!-- Validation Results -->
+            {% if validationResults %}
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-check-circle me-2"></i>Validation Results
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Run Date</th>
+                                        <th>Validation Loss</th>
+                                        <th>Reconstruction Loss</th>
+                                        <th>KL Loss</th>
+                                        <th>Coherence</th>
+                                        <th>Diversity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for result in validationResults %}
+                                    <tr>
+                                        <td>{{ result.createdAt|date:"d/m/Y H:i" }}</td>
+                                        <td class="font-monospace">{{ result.validationLoss|floatformat:6 }}</td>
+                                        <td class="font-monospace">{{ result.reconstructionLoss|floatformat:6 }}</td>
+                                        <td class="font-monospace">{{ result.klLoss|floatformat:6 }}</td>
+                                        <td class="font-monospace">{{ result.coherenceScore|floatformat:6|default:"—" }}</td>
+                                        <td class="font-monospace">{{ result.diversityScore|floatformat:6|default:"—" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Test Results -->
+            {% if testResults %}
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-flask me-2"></i>Test Results
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Run Date</th>
+                                        <th>Test Loss</th>
+                                        <th>Reconstruction Loss</th>
+                                        <th>KL Loss</th>
+                                        <th>Coherence</th>
+                                        <th>Diversity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for result in testResults %}
+                                    <tr>
+                                        <td>{{ result.createdAt|date:"d/m/Y H:i" }}</td>
+                                        <td class="font-monospace">{{ result.testLoss|floatformat:6 }}</td>
+                                        <td class="font-monospace">{{ result.reconstructionLoss|floatformat:6 }}</td>
+                                        <td class="font-monospace">{{ result.klLoss|floatformat:6 }}</td>
+                                        <td class="font-monospace">{{ result.coherenceScore|floatformat:6|default:"—" }}</td>
+                                        <td class="font-monospace">{{ result.diversityScore|floatformat:6|default:"—" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <!-- Actions Card -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if trainingRun.status == 'completed' %}
+                        <a href="{% url 'enhancedModelLoad' %}" class="btn btn-primary">
+                            <i class="fas fa-folder-open me-2"></i>Load This Model
+                        </a>
+                        <form method="post" action="{% url 'validateModel' trainingRun.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-info w-100" onclick="return confirm('Run validation on this model?')">
+                                <i class="fas fa-check-circle me-2"></i>Run Validation
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'testModel' trainingRun.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-success w-100" onclick="return confirm('Run test on this model?')">
+                                <i class="fas fa-flask me-2"></i>Run Test
+                            </button>
+                        </form>
+                    {% elif trainingRun.status == 'failed' %}
+                        <a href="{% url 'trainingNew' %}" class="btn btn-primary">
+                            <i class="fas fa-play me-2"></i>Start New Training
+                        </a>
+                        {% if trainingRun.modelPath %}
+                            <a href="{% url 'enhancedModelLoad' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-folder-open me-2"></i>Load From Checkpoint
+                            </a>
+                        {% endif %}
+                    {% elif trainingRun.status == 'running' %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-spinner fa-spin me-2"></i>
+                            Training is currently in progress...
+                        </div>
+                        <button class="btn btn-outline-secondary" onclick="location.reload()">
+                            <i class="fas fa-sync-alt me-2"></i>Refresh Status
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Information -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Training Details</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row small">
+                    <dt class="col-6">Dataset Size:</dt>
+                    <dd class="col-6">{{ trainingRun.dataset.numBatches|default:"Unknown" }} batches</dd>
+                    
+                    <dt class="col-6">Vocabulary:</dt>
+                    <dd class="col-6">{{ trainingRun.dataset.vocabSize|default:"Unknown" }} terms</dd>
+                    
+                    <dt class="col-6">Hidden Layers:</dt>
+                    <dd class="col-6">{{ trainingRun.hiddenDim1Size }} → {{ trainingRun.hiddenDim2Size }}</dd>
+                    
+                    <dt class="col-6">Latent Space:</dt>
+                    <dd class="col-6">{{ trainingRun.latentDimSize }} dimensions</dd>
+                    
+                    <dt class="col-6">Max Epochs:</dt>
+                    <dd class="col-6">{{ trainingRun.numEpochs }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Next Steps</h6>
+            </div>
+            <div class="card-body">
+                {% if trainingRun.status == 'completed' %}
+                    <ul class="small mb-0">
+                        <li>Run validation to assess model performance</li>
+                        <li>Run test for final evaluation metrics</li>
+                        <li>Use "Load Model" to continue training or run inference</li>
+                        <li>Mark model as "Trained" in View Models for topic visualisation</li>
+                    </ul>
+                {% elif trainingRun.status == 'failed' %}
+                    <ul class="small mb-0">
+                        <li>Check server logs for error details</li>
+                        <li>Ensure dataset is properly preprocessed</li>
+                        <li>Try loading from the last checkpoint if available</li>
+                        <li>Consider adjusting model parameters</li>
+                    </ul>
+                {% elif trainingRun.status == 'running' %}
+                    <ul class="small mb-0">
+                        <li>Training is proceeding in the background</li>
+                        <li>Models are saved automatically every epoch</li>
+                        <li>You can close this page safely</li>
+                        <li>Check back later for completion status</li>
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if trainingRun.status == 'running' %}
+<script>
+    // Auto-refresh for running training
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check training status every 15 seconds
+        setInterval(function() {
+            const statusUrl = `{% url 'trainingStatusApi' trainingRun.pk %}`;
+            fetch(statusUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status !== 'running') {
+                        // Training completed or failed - reload page
+                        location.reload();
+                    }
+                })
+                .catch(error => console.error('Error checking status:', error));
+        }, 15000);
+        
+        // Full page refresh every 30 seconds
+        setTimeout(function() {
+            location.reload();
+        }, 30000);
+    });
+</script>
+{% endif %}
+{% endblock %}

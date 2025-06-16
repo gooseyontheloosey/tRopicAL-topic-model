@@ -1,0 +1,380 @@
+<!-- templates/topicModeller/datasetUpload.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block extra_css %}
+<style>
+    #file-type-toggle .btn-check:checked + .btn-outline-primary {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
+    }
+    
+    #file-type-toggle .btn-outline-primary {
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+    
+    #file-type-toggle .btn-outline-primary:hover {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
+    }
+    
+    #file-list .mb-2 {
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        background-color: rgba(0, 0, 0, 0.03);
+    }
+</style>
+{% endblock %}
+
+{% block page_title %}Upload Dataset{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'datasetList' %}">Datasets</a></li>
+<li class="breadcrumb-item active">Upload</li>
+{% endblock %}
+
+{% block toolbar %}
+<a href="{% url 'datasetList' %}" class="btn btn-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Back to Datasets
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Upload New Dataset</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Hidden field for file type -->
+                    <input type="hidden" name="fileType" id="fileTypeInput" value="parquet">
+                    
+                    <!-- File Type Selection -->
+                    <div class="mb-4">
+                        <label class="form-label">File Type <span class="text-danger">*</span></label>
+                        <div class="btn-group w-100" role="group" id="file-type-toggle">
+                            <input type="radio" class="btn-check" name="fileType" id="type-parquet" value="parquet" checked>
+                            <label class="btn btn-outline-primary" for="type-parquet">
+                                <i class="fas fa-database me-2"></i>.parquet
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="fileType" id="type-docx" value="docx">
+                            <label class="btn btn-outline-primary" for="type-docx">
+                                <i class="fas fa-file-word me-2"></i>.docx
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            Choose the type of files you want to upload. Names are automatically generated from filenames.
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.uploadedFile.id_for_label }}" class="form-label">
+                            Upload File<span id="multiple-indicator">s</span> <span class="text-danger">*</span>
+                        </label>
+                        {{ form.uploadedFile }}
+                        {% if form.uploadedFile.errors %}
+                            <div class="text-danger small">{{ form.uploadedFile.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text" id="upload-help-text">
+                            Upload a single Parquet file. The dataset name will be the filename.
+                        </div>
+                    </div>
+                    
+                    <div id="file-info" class="alert alert-secondary d-none">
+                        <div id="file-list">
+                            <!-- Files will be listed here -->
+                        </div>
+                        <div id="conversion-notice" class="mt-2 d-none">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            <small class="text-info">DOCX files will be converted to Parquet format and combined into a single dataset.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>What happens next?</strong>
+                        <ul class="mb-0 mt-2" id="info-list">
+                            <li>Your dataset will be registered in the system</li>
+                            <li>You can then preprocess it to prepare for training</li>
+                            <li>Preprocessing includes sentiment analysis, cleaning, and TF-IDF calculation</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'datasetList' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
+                            <i class="fas fa-cloud-upload-alt me-1"></i>Upload Dataset
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Help Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-question-circle me-1"></i>Need Help?
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="helpAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#fileFormat">
+                                What file formats are supported?
+                            </button>
+                        </h2>
+                        <div id="fileFormat" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                The system supports:
+                                <ul>
+                                    <li><strong>Parquet files</strong> (.parquet) - Single file containing structured data with a 'text' column</li>
+                                    <li><strong>Word files</strong> (.docx) - Multiple files supported. Each will be converted to Parquet format and combined into one dataset</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#dataStructure">
+                                How should my data be structured?
+                            </button>
+                        </h2>
+                        <div id="dataStructure" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <strong>For Parquet files:</strong>
+                                <ul>
+                                    <li>Must contain a 'text' column with document content</li>
+                                    <li>Each row represents one document</li>
+                                    <li>Additional columns are allowed but will be ignored</li>
+                                </ul>
+                                <strong>For DOCX files:</strong>
+                                <ul>
+                                    <li>Each paragraph becomes a separate document</li>
+                                    <li>Multiple files will be combined into one dataset</li>
+                                    <li>Empty paragraphs are automatically ignored</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#uploadTips">
+                                Upload Tips & Limits
+                            </button>
+                        </h2>
+                        <div id="uploadTips" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li><strong>File Size:</strong> Maximum 500MB per file, 2GB total</li>
+                                    <li><strong>Multiple DOCX:</strong> Select all files at once using Ctrl/Cmd+click</li>
+                                    <li><strong>Automatic Naming:</strong> Dataset names are generated from filenames</li>
+                                    <li><strong>Large Files:</strong> May take longer to upload and convert</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('{{ form.uploadedFile.id_for_label }}');
+        const fileTypeInput = document.getElementById('fileTypeInput');
+        const fileInfo = document.getElementById('file-info');
+        const fileList = document.getElementById('file-list');
+        const conversionNotice = document.getElementById('conversion-notice');
+        const submitBtn = document.getElementById('submit-btn');
+        const form = document.querySelector('form');
+        const parquetRadio = document.getElementById('type-parquet');
+        const docxRadio = document.getElementById('type-docx');
+        const multipleIndicator = document.getElementById('multiple-indicator');
+        const uploadHelpText = document.getElementById('upload-help-text');
+        const infoList = document.getElementById('info-list');
+        
+        function updateFileInputMode() {
+            if (docxRadio.checked) {
+                fileTypeInput.value = 'docx';
+                fileInput.multiple = true;
+                fileInput.accept = '.docx';
+                multipleIndicator.style.display = 'inline';
+                uploadHelpText.textContent = 'Upload one or more DOCX files. Dataset will be named from filename(s).';
+                
+                infoList.innerHTML = `
+                    <li>Multiple DOCX files will be combined into one dataset</li>
+                    <li>Each file will be converted to Parquet format</li>
+                    <li>All documents will be merged for preprocessing</li>
+                    <li>Preprocessing includes sentiment analysis, cleaning, and TF-IDF calculation</li>
+                `;
+            } else {
+                fileTypeInput.value = 'parquet';
+                fileInput.multiple = false;
+                fileInput.accept = '.parquet';
+                multipleIndicator.style.display = 'none';
+                uploadHelpText.textContent = 'Upload a single Parquet file. The dataset name will be the filename.';
+                
+                infoList.innerHTML = `
+                    <li>Your dataset will be registered in the system</li>
+                    <li>You can then preprocess it to prepare for training</li>
+                    <li>Preprocessing includes sentiment analysis, cleaning, and TF-IDF calculation</li>
+                `;
+            }
+            
+            fileInput.value = '';
+            fileInfo.classList.add('d-none');
+            updateSubmitButton();
+        }
+        
+        parquetRadio.addEventListener('change', updateFileInputMode);
+        docxRadio.addEventListener('change', updateFileInputMode);
+        
+        function validateAndDisplayFiles() {
+            const files = Array.from(fileInput.files);
+            const isDocx = docxRadio.checked;
+            const maxFileSize = 500 * 1024 * 1024; // 500MB
+            const maxTotalSize = 2 * 1024 * 1024 * 1024; // 2GB
+            
+            if (files.length === 0) {
+                fileInfo.classList.add('d-none');
+                return true;
+            }
+            
+            // Validate file types
+            const invalidFiles = files.filter(file => {
+                const extension = '.' + file.name.split('.').pop().toLowerCase();
+                return isDocx ? extension !== '.docx' : extension !== '.parquet';
+            });
+            
+            if (invalidFiles.length > 0) {
+                alert(`Invalid file type(s): ${invalidFiles.map(f => f.name).join(', ')}. Please select ${isDocx ? '.docx' : '.parquet'} files only.`);
+                fileInput.value = '';
+                fileInfo.classList.add('d-none');
+                return false;
+            }
+            
+            // Validate file sizes
+            const oversizedFiles = files.filter(file => file.size > maxFileSize);
+            if (oversizedFiles.length > 0) {
+                alert(`File(s) too large: ${oversizedFiles.map(f => f.name).join(', ')}. Maximum size is 500MB per file.`);
+                fileInput.value = '';
+                fileInfo.classList.add('d-none');
+                return false;
+            }
+            
+            // Validate total size for multiple files
+            const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+            if (totalSize > maxTotalSize) {
+                alert(`Total file size too large (${(totalSize / 1024 / 1024 / 1024).toFixed(1)}GB). Maximum total size is 2GB.`);
+                fileInput.value = '';
+                fileInfo.classList.add('d-none');
+                return false;
+            }
+            
+            // Display file information
+            displayFileList(files, isDocx);
+            return true;
+        }
+        
+        // Display list of selected files
+        function displayFileList(files, isDocx) {
+            fileList.innerHTML = '';
+            
+            files.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'mb-2';
+                
+                const sizeClass = file.size > 100 * 1024 * 1024 ? 'text-warning' : 'text-success';
+                const icon = file.size > 100 * 1024 * 1024 ? 'fa-exclamation-triangle' : 'fa-check-circle';
+                
+                fileItem.innerHTML = `
+                    <i class="fas ${icon} me-2 ${sizeClass}"></i>
+                    <strong>${file.name}</strong>
+                    <span class="text-muted ms-2">(${(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+                    ${file.size > 100 * 1024 * 1024 ? '<small class="text-warning ms-2">Large file</small>' : ''}
+                `;
+                fileList.appendChild(fileItem);
+            });
+            
+            // Show conversion notice for DOCX files
+            if (isDocx) {
+                conversionNotice.classList.remove('d-none');
+                fileInfo.className = 'alert alert-info';
+            } else {
+                conversionNotice.classList.add('d-none');
+                fileInfo.className = 'alert alert-success';
+            }
+            
+            fileInfo.classList.remove('d-none');
+        }
+        
+        // Update submit button state
+        function updateSubmitButton() {
+            const hasFiles = fileInput.files.length > 0;
+            submitBtn.disabled = !hasFiles;
+        }
+        
+        // File input change handler
+        fileInput.addEventListener('change', function() {
+            if (validateAndDisplayFiles()) {
+                updateSubmitButton();
+            }
+        });
+        
+        // Form submission handler
+        form.addEventListener('submit', function(e) {
+            const files = Array.from(fileInput.files);
+            const isDocx = docxRadio.checked;
+            
+            if (files.length === 0) {
+                e.preventDefault();
+                alert('Please select file(s) to upload.');
+                return false;
+            }
+            
+            // Show loading state
+            if (isDocx) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Converting and Uploading...';
+            } else {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading...';
+            }
+            submitBtn.disabled = true;
+            
+            // Show progress for large files
+            const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+            if (totalSize > 50 * 1024 * 1024) {
+                const progressDiv = document.createElement('div');
+                progressDiv.className = 'mt-3';
+                progressDiv.innerHTML = `
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%">
+                            ${isDocx ? 'Converting and Uploading...' : 'Uploading...'}
+                        </div>
+                    </div>
+                `;
+                submitBtn.parentNode.insertBefore(progressDiv, submitBtn);
+            }
+        });
+        
+        // Initialise the form
+        updateFileInputMode();
+        updateSubmitButton();
+    });
+</script>
+{% endblock %}

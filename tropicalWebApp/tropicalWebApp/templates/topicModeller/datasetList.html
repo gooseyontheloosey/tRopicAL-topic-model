@@ -1,0 +1,151 @@
+<!-- templates/topicModeller/datasetList.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block page_title %}Datasets{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Datasets</li>
+{% endblock %}
+
+{% block toolbar %}
+<a href="{% url 'datasetUpload' %}" class="btn btn-primary">
+    <i class="fas fa-upload me-1"></i>Upload New Dataset
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        {% if datasets %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">All Datasets ({{ datasets.count }})</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                    <th>Vocabulary Size</th>
+                                    <th>Batches</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dataset in datasets %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ dataset.name }}</strong>
+                                        {% if dataset.uploadedFile %}
+                                            <br><small class="text-muted">{{ dataset.uploadedFile.name }}</small>
+                                        {% else %}
+                                            <br><small class="text-muted">{{ dataset.location }}/{{ dataset.filename }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if dataset.isPreprocessed %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>Preprocessed
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock me-1"></i>Not Preprocessed
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if dataset.vocabSize %}
+                                            {{ dataset.vocabSize|floatformat:0 }}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if dataset.numBatches %}
+                                            {{ dataset.numBatches }}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ dataset.createdAt|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'datasetDetail' dataset.pk %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if not dataset.isPreprocessed %}
+                                                <a href="{% url 'preprocessDataset' dataset.pk %}" class="btn btn-sm btn-outline-success">
+                                                    <i class="fas fa-cogs"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-database fa-4x text-muted mb-3"></i>
+                <h3>No Datasets Yet</h3>
+                <p class="text-muted">Upload your first dataset to get started with topic modeling.</p>
+                <a href="{% url 'datasetUpload' %}" class="btn btn-primary">
+                    <i class="fas fa-upload me-1"></i>Upload Dataset
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if datasets %}
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Dataset Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-primary">{{ datasets.count }}</h4>
+                            <small class="text-muted">Total Datasets</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-success">{{ datasets|length|add:"-1" }}</h4>
+                            <small class="text-muted">Preprocessed</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'datasetUpload' %}" class="btn btn-primary">
+                        <i class="fas fa-upload me-2"></i>Upload New Dataset
+                    </a>
+                    <a href="{% url 'trainingNew' %}" class="btn btn-outline-success">
+                        <i class="fas fa-brain me-2"></i>Start Training
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

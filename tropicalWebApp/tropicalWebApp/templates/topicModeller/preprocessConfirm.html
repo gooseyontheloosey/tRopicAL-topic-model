@@ -1,0 +1,72 @@
+<!-- templates/topicModeller/preprocessConfirm.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block page_title %}Confirm Preprocessing{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'datasetList' %}">Datasets</a></li>
+<li class="breadcrumb-item"><a href="{% url 'datasetDetail' dataset.pk %}">{{ dataset.name }}</a></li>
+<li class="breadcrumb-item active">Preprocess</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>Confirm Dataset Preprocessing
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Important:</strong> Preprocessing is a time-intensive operation that cannot be undone.
+                </div>
+                
+                <h6>Dataset Information</h6>
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Dataset Name:</strong></td>
+                        <td>{{ dataset.name }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Location:</strong></td>
+                        <td><code>{{ dataset.location }}</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Filename:</strong></td>
+                        <td><code>{{ dataset.filename }}</code></td>
+                    </tr>
+                </table>
+                
+                <h6>Preprocessing Steps</h6>
+                <p>The following operations will be performed:</p>
+                <ol>
+                    <li><strong>Sentiment Analysis</strong> - VADER sentiment scoring for each sentence</li>
+                    <li><strong>Text Cleaning</strong> - Remove punctuation, stop words, and apply lemmatization</li>
+                    <li><strong>TF-IDF Calculation</strong> - Convert text to numerical representation</li>
+                </ol>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Note:</strong> This process may take several minutes to hours depending on dataset size.
+                    The processing will run in the background, and you can monitor progress from the dataset detail page.
+                </div>
+                
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'datasetDetail' dataset.pk %}" class="btn btn-secondary me-md-2">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-cogs me-1"></i>Start Preprocessing
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+<!-- templates/topicModeller/validateConfirm.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block page_title %}Confirm Model Validation{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'trainingList' %}">Training</a></li>
+<li class="breadcrumb-item"><a href="{% url 'trainingDetail' trainingRun.pk %}">{{ trainingRun.runName }}</a></li>
+<li class="breadcrumb-item active">Validate</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-check-circle me-2"></i>Confirm Model Validation
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Model Validation:</strong> This will evaluate the trained model on validation data and calculate topic metrics.
+                </div>
+                
+                <h6>Training Run Information</h6>
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Run Name:</strong></td>
+                        <td>{{ trainingRun.runName }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Dataset:</strong></td>
+                        <td>{{ trainingRun.dataset.name }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Model Architecture:</strong></td>
+                        <td>{{ trainingRun.hiddenDim1Size }}-{{ trainingRun.hiddenDim2Size }}-{{ trainingRun.latentDimSize }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Epochs Trained:</strong></td>
+                        <td>{{ trainingRun.numEpochs }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Training Status:</strong></td>
+                        <td>
+                            <span class="badge {% if trainingRun.status == 'completed' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ trainingRun.status|capfirst }}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+                
+                <h6>Validation Process</h6>
+                <p>The validation will include:</p>
+                <ul>
+                    <li>Loss calculation on validation data</li>
+                    <li>Topic coherence measurement</li>
+                    <li>Topic diversity assessment</li>
+                    <li>Model performance metrics</li>
+                </ul>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-clock me-2"></i>
+                    <strong>Processing Time:</strong> Validation typically takes a few minutes depending on dataset size.
+                    Results will be displayed on the training detail page once complete.
+                </div>
+                
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'trainingDetail' trainingRun.pk %}" class="btn btn-secondary me-md-2">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check-circle me-1"></i>Start Validation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

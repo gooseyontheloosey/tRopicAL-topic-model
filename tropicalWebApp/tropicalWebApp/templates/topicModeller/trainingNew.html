@@ -1,0 +1,202 @@
+<!-- templates/topicModeller/trainingNew.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block page_title %}New Training Run{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'trainingList' %}">Training</a></li>
+<li class="breadcrumb-item active">New Training</li>
+{% endblock %}
+
+{% block toolbar %}
+<a href="{% url 'trainingList' %}" class="btn btn-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Back to Training
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-brain me-2"></i>Start New Training Run
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="trainingForm">
+                    {% csrf_token %}
+                    
+                    <!-- Dataset Selection -->
+                    <div class="mb-4">
+                        <label for="{{ form.dataset.id_for_label }}" class="form-label">
+                            Select Dataset <span class="text-danger">*</span>
+                        </label>
+                        {{ form.dataset }}
+                        {% if form.dataset.errors %}
+                            <div class="text-danger small">{{ form.dataset.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text">Choose a preprocessed dataset for training.</div>
+                        {% if not form.dataset.queryset %}
+                            <div class="alert alert-warning mt-2">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                No preprocessed datasets available. Please <a href="{% url 'datasetUpload' %}">upload and preprocess</a> a dataset first.
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Run Name -->
+                    <div class="mb-4">
+                        <label for="{{ form.runName.id_for_label }}" class="form-label">
+                            Run Name <span class="text-danger">*</span>
+                        </label>
+                        {{ form.runName }}
+                        {% if form.runName.errors %}
+                            <div class="text-danger small">{{ form.runName.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text">Choose a descriptive name for this training run.</div>
+                    </div>
+                    
+                    <!-- Model Parameters -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Model Architecture Parameters</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.hiddenDim1Size.id_for_label }}" class="form-label">
+                                            Hidden Dimension 1 Size
+                                        </label>
+                                        {{ form.hiddenDim1Size }}
+                                        {% if form.hiddenDim1Size.errors %}
+                                            <div class="text-danger small">{{ form.hiddenDim1Size.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="form-text">First hidden layer size (default: 384)</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.hiddenDim2Size.id_for_label }}" class="form-label">
+                                            Hidden Dimension 2 Size
+                                        </label>
+                                        {{ form.hiddenDim2Size }}
+                                        {% if form.hiddenDim2Size.errors %}
+                                            <div class="text-danger small">{{ form.hiddenDim2Size.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="form-text">Second hidden layer size (default: 192)</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.latentDimSize.id_for_label }}" class="form-label">
+                                            Latent Dimension Size
+                                        </label>
+                                        {{ form.latentDimSize }}
+                                        {% if form.latentDimSize.errors %}
+                                            <div class="text-danger small">{{ form.latentDimSize.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="form-text">Latent space size (default: 75)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Parameter Guidelines:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li><strong>Hidden Dimensions:</strong> Control the model's capacity. Larger values can capture more complex patterns but require more memory.</li>
+                                    <li><strong>Latent Dimension:</strong> Determines the number of topics. Typical range: 50-200 depending on dataset complexity.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Training Parameters -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Training Parameters</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.numEpochs.id_for_label }}" class="form-label">
+                                            Number of Epochs
+                                        </label>
+                                        {{ form.numEpochs }}
+                                        {% if form.numEpochs.errors %}
+                                            <div class="text-danger small">{{ form.numEpochs.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="form-text">Total training epochs (default: 10)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Training Notes:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Training runs in the background. You can close this page and check progress later.</li>
+                                    <li>Models are automatically saved every epoch and after completion.</li>
+                                    <li>Topic metrics are evaluated every 5 epochs during training.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Buttons -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'trainingList' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary" id="startTrainingBtn">
+                            <i class="fas fa-play me-1"></i>Start Training
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+
+    // Form submission handling
+    document.getElementById('trainingForm').addEventListener('submit', function(e) {
+        const dataset = document.getElementById('{{ form.dataset.id_for_label }}').value;
+        
+        if (!dataset) {
+            e.preventDefault();
+            alert('Please select a dataset before starting training.');
+            return false;
+        }
+        
+        // Show loading state
+        const submitBtn = document.getElementById('startTrainingBtn');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Starting Training...';
+        submitBtn.disabled = true;
+        
+        // Show confirmation
+        if (!confirm('Start training with the selected parameters? This process will run in the background.')) {
+            e.preventDefault();
+            submitBtn.innerHTML = '<i class="fas fa-play me-1"></i>Start Training';
+            submitBtn.disabled = false;
+            return false;
+        }
+    });
+    
+    // Auto-generate run name based on dataset
+    document.getElementById('{{ form.dataset.id_for_label }}').addEventListener('change', function() {
+        const runNameField = document.getElementById('{{ form.runName.id_for_label }}');
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (selectedOption.text && !runNameField.value) {
+            const timestamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+            runNameField.value = `${selectedOption.text}_training_${timestamp}`;
+        }
+    });
+</script>
+{% endblock %}

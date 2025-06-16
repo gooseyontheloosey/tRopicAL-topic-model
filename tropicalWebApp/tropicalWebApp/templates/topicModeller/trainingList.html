@@ -1,0 +1,274 @@
+<!-- templates/topicModeller/trainingList.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block page_title %}Training Runs{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Training Runs</li>
+{% endblock %}
+
+{% block toolbar %}
+<a href="{% url 'trainingNew' %}" class="btn btn-primary">
+    <i class="fas fa-play me-1"></i>New Training Run
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-8">
+                                <h6 class="card-title">Completed</h6>
+                                <h4 class="mb-0">{{ statusCounts.completed }}</h4>
+                            </div>
+                            <div class="col-4 text-end">
+                                <i class="fas fa-check-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-8">
+                                <h6 class="card-title">Running</h6>
+                                <h4 class="mb-0">{{ statusCounts.running }}</h4>
+                            </div>
+                            <div class="col-4 text-end">
+                                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-8">
+                                <h6 class="card-title">Failed</h6>
+                                <h4 class="mb-0">{{ statusCounts.failed }}</h4>
+                            </div>
+                            <div class="col-4 text-end">
+                                <i class="fas fa-times-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-secondary text-white">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-8">
+                                <h6 class="card-title">Pending</h6>
+                                <h4 class="mb-0">{{ statusCounts.pending }}</h4>
+                            </div>
+                            <div class="col-4 text-end">
+                                <i class="fas fa-hourglass-half fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Runs Table -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>All Training Runs ({{ trainingRuns.count }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if trainingRuns %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Run Name</th>
+                                    <th>Dataset</th>
+                                    <th>Status</th>
+                                    <th>Architecture</th>
+                                    <th>Epochs</th>
+                                    <th>Final Loss</th>
+                                    <th>Coherence</th>
+                                    <th>Started</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for run in trainingRuns %}
+                                <tr id="training-run-{{ run.pk }}">
+                                    <td>
+                                        <strong>{{ run.runName }}</strong>
+                                        {% if run.status == 'running' %}
+                                            <br><small class="text-primary">
+                                                <i class="fas fa-spinner fa-spin me-1"></i>Training in progress...
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'datasetDetail' run.dataset.pk %}" class="text-decoration-none">
+                                            {{ run.dataset.name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge status-badge {% if run.status == 'completed' %}bg-success{% elif run.status == 'running' %}bg-primary{% elif run.status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {% if run.status == 'completed' %}
+                                                <i class="fas fa-check-circle me-1"></i>Completed
+                                            {% elif run.status == 'running' %}
+                                                <i class="fas fa-spinner fa-spin me-1"></i>Running
+                                            {% elif run.status == 'failed' %}
+                                                <i class="fas fa-times-circle me-1"></i>Failed
+                                            {% else %}
+                                                <i class="fas fa-hourglass-half me-1"></i>Pending
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small class="font-monospace">
+                                            {{ run.hiddenDim1Size }} - {{ run.hiddenDim2Size }} - {{ run.latentDimSize }}
+                                        </small>
+                                    </td>
+                                    <td>{{ run.numEpochs }}</td>
+                                    <td>
+                                        {% if run.finalLoss %}
+                                            <span class="font-monospace finalLoss">{{ run.finalLoss|floatformat:4 }}</span>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if run.coherenceScore %}
+                                            <span class="font-monospace coherenceScore">{{ run.coherenceScore|floatformat:4 }}</span>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ run.createdAt|date:"d/m/Y" }}<br>
+                                            {{ run.createdAt|time:"H:i" }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'trainingDetail' run.pk %}" class="btn btn-outline-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            
+                                            {% if run.status == 'completed' %}
+                                                <a href="{% url 'validateModel' run.pk %}" class="btn btn-outline-info" title="Validate Model">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </a>
+                                                <a href="{% url 'testModel' run.pk %}" class="btn btn-outline-success" title="Test Model">
+                                                    <i class="fas fa-flask"></i>
+                                                </a>
+                                            {% elif run.status == 'running' %}
+                                                <!-- Quick fix for stuck running status -->
+                                                <form method="post" action="{% url 'trainingList' %}" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="fix_status">
+                                                    <input type="hidden" name="run_id" value="{{ run.pk }}">
+                                                    <button type="submit" class="btn btn-outline-warning btn-sm" title="Mark as Failed" onclick="return confirm('Mark this training run as failed? (Use this if training was interrupted)')">
+                                                        <i class="fas fa-exclamation-triangle"></i> Fix Status
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-brain fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Training Runs Found</h5>
+                        <p class="text-muted">You haven't started any training runs yet.</p>
+                        <a href="{% url 'trainingNew' %}" class="btn btn-primary">
+                            <i class="fas fa-play me-1"></i>Start Your First Training Run
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Quick Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'trainingNew' %}" class="btn btn-primary">
+                                <i class="fas fa-play me-2"></i>Start New Training
+                            </a>
+                            <a href="{% url 'enhancedModelLoad' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-folder-open me-2"></i>Load Existing Model
+                            </a>
+                            <a href="{% url 'datasetList' %}" class="btn btn-outline-info">
+                                <i class="fas fa-database me-2"></i>Manage Datasets
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Training Tips</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="small mb-0">
+                            <li>Ensure your dataset is preprocessed before training</li>
+                            <li>Training runs in the background - you can close this tab</li>
+                            <li>Models are automatically saved every epoch</li>
+                            <li>Topic metrics are evaluated every 5 epochs</li>
+                            <li>Longer training (more epochs) generally improves results</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh for running training runs
+    document.addEventListener('DOMContentLoaded', function() {
+        const runningTraining = document.querySelectorAll('.badge:contains("Running")');
+        
+        if (runningTraining.length > 0) {
+            // Check training status every 10 seconds
+            setInterval(function() {
+                runningTraining.forEach(function(badge) {
+                    const runId = badge.closest('tr').id.replace('training-run-', '');
+                    const statusUrl = `/api/training/${runId}/status/`;
+                    
+                    refreshStatus(`training-run-${runId}`, statusUrl);
+                });
+            }, 10000);
+            
+            // Full page refresh every 30 seconds
+            setTimeout(function() {
+                location.reload();
+            }, 30000);
+        }
+    });
+</script>
+{% endblock %}

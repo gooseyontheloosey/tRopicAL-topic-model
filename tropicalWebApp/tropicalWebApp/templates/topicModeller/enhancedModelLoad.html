@@ -1,0 +1,415 @@
+<!-- templates/topicModeller/enhancedModelLoad.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block page_title %}Load Model{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Load Model</li>
+{% endblock %}
+
+{% block toolbar %}
+<a href="{% url 'viewModels' %}" class="btn btn-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Back to Models
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-folder-open me-2"></i>Load and Run Model
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if not modulesLoaded %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Error:</strong> Topic modelling modules are not available. Please check your setup.
+                    </div>
+                {% else %}
+                    <form method="post" enctype="multipart/form-data" id="modelLoadForm">
+                        {% csrf_token %}
+                        
+                        <!-- Model and Dataset Selection -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Model Selection</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="{{ form.trainingRun.id_for_label }}" class="form-label">
+                                                <i class="fas fa-brain me-1"></i>Select Previously Trained Model <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.trainingRun }}
+                                            {% if form.trainingRun.errors %}
+                                                <div class="text-danger small">{{ form.trainingRun.errors.0 }}</div>
+                                            {% endif %}
+                                            <div class="form-text">Choose a completed training run to load.</div>
+                                        </div>
+                                        
+                                        <div id="modelDetails" class="d-none">
+                                            <div class="alert alert-info">
+                                                <h6>Model Details</h6>
+                                                <div id="modelDetailsContent"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Dataset Selection</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="{{ form.dataset.id_for_label }}" class="form-label">
+                                                <i class="fas fa-database me-1"></i>Select Dataset <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.dataset }}
+                                            {% if form.dataset.errors %}
+                                                <div class="text-danger small">{{ form.dataset.errors.0 }}</div>
+                                            {% endif %}
+                                            <div class="form-text">Choose a preprocessed dataset to work with.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Selection -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Action to Perform</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    {% for choice in form.action.field.choices %}
+                                    <div class="col-md-4">
+                                        <div class="card action-card" data-action="{{ choice.0 }}">
+                                            <div class="card-body text-center">
+                                                <input type="radio" name="{{ form.action.name }}" value="{{ choice.0 }}" 
+                                                       id="action_{{ choice.0 }}" class="form-check-input d-none action-radio">
+                                                <label for="action_{{ choice.0 }}" class="w-100 h-100 d-flex flex-column justify-content-center">
+                                                    {% if choice.0 == 'train' %}
+                                                        <i class="fas fa-play fa-2x text-success mb-2"></i>
+                                                        <h6>Continue Training</h6>
+                                                        <p class="small text-muted">Resume training from where it left off</p>
+                                                    {% elif choice.0 == 'validate' %}
+                                                        <i class="fas fa-check-circle fa-2x text-primary mb-2"></i>
+                                                        <h6>Validate Model</h6>
+                                                        <p class="small text-muted">Run validation on the loaded model</p>
+                                                    {% elif choice.0 == 'test' %}
+                                                        <i class="fas fa-flask fa-2x text-info mb-2"></i>
+                                                        <h6>Test Model</h6>
+                                                        <p class="small text-muted">Evaluate model performance on test data</p>
+                                                    {% endif %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.action.errors %}
+                                    <div class="text-danger small mt-2">{{ form.action.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Model Parameters -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Model Parameters</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="{{ form.hiddenDim1Size.id_for_label }}" class="form-label">
+                                                Hidden Dimension 1 Size
+                                            </label>
+                                            {{ form.hiddenDim1Size }}
+                                            {% if form.hiddenDim1Size.errors %}
+                                                <div class="text-danger small">{{ form.hiddenDim1Size.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="{{ form.hiddenDim2Size.id_for_label }}" class="form-label">
+                                                Hidden Dimension 2 Size
+                                            </label>
+                                            {{ form.hiddenDim2Size }}
+                                            {% if form.hiddenDim2Size.errors %}
+                                                <div class="text-danger small">{{ form.hiddenDim2Size.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="{{ form.latentDimSize.id_for_label }}" class="form-label">
+                                                Latent Dimension Size
+                                            </label>
+                                            {{ form.latentDimSize }}
+                                            {% if form.latentDimSize.errors %}
+                                                <div class="text-danger small">{{ form.latentDimSize.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Note:</strong> Parameters will be automatically populated based on the selected model.
+                                    You can adjust them if needed.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Training Parameters (shown only for train action) -->
+                        <div class="card mb-4" id="trainingParams" style="display: none;">
+                            <div class="card-header">
+                                <h6 class="mb-0">Training Parameters</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.startEpoch.id_for_label }}" class="form-label">
+                                                Start Epoch <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.startEpoch }}
+                                            {% if form.startEpoch.errors %}
+                                                <div class="text-danger small">{{ form.startEpoch.errors.0 }}</div>
+                                            {% endif %}
+                                            <div class="form-text">Epoch to resume training from</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.numEpochs.id_for_label }}" class="form-label">
+                                                Total Epochs <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.numEpochs }}
+                                            {% if form.numEpochs.errors %}
+                                                <div class="text-danger small">{{ form.numEpochs.errors.0 }}</div>
+                                            {% endif %}
+                                            <div class="form-text">Total number of epochs to train to</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'viewModels' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                            <button type="submit" class="btn btn-primary" id="loadModelBtn" disabled>
+                                <i class="fas fa-folder-open me-1"></i>Load Model and Proceed
+                            </button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Tips and Help -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-1"></i>Tips for Loading Models
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>Continue Training</h6>
+                        <ul class="small">
+                            <li>Resumes training from the last saved checkpoint</li>
+                            <li>Useful for extending training or fine-tuning</li>
+                            <li>Creates a new training run entry</li>
+                            <li>Requires start epoch and total epochs</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Validate Model</h6>
+                        <ul class="small">
+                            <li>Evaluates model on validation data</li>
+                            <li>Calculates loss and topic metrics</li>
+                            <li>Results saved to the original training run</li>
+                            <li>Good for assessing model quality</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Test Model</h6>
+                        <ul class="small">
+                            <li>Runs final evaluation on test data</li>
+                            <li>Provides comprehensive performance metrics</li>
+                            <li>Results saved to the original training run</li>
+                            <li>Use for final model assessment</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .action-card {
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid #dee2e6;
+        min-height: 140px;
+    }
+    
+    .action-card:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .action-card.selected {
+        border-color: #0d6efd;
+        background-color: #f8f9fa;
+    }
+    
+    .action-card label {
+        cursor: pointer;
+        margin: 0;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('modelLoadForm');
+        const submitBtn = document.getElementById('loadModelBtn');
+        const modelSelect = document.getElementById('{{ form.trainingRun.id_for_label }}');
+        const datasetSelect = document.getElementById('{{ form.dataset.id_for_label }}');
+        const actionCards = document.querySelectorAll('.action-card');
+        const actionRadios = document.querySelectorAll('.action-radio');
+        const trainingParams = document.getElementById('trainingParams');
+        const modelDetails = document.getElementById('modelDetails');
+        const modelDetailsContent = document.getElementById('modelDetailsContent');
+        
+        // Action card selection handling
+        actionCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const action = this.dataset.action;
+                const radio = document.getElementById(`action_${action}`);
+                
+                actionCards.forEach(c => c.classList.remove('selected'));
+                
+                this.classList.add('selected');
+                radio.checked = true;
+                
+                // Show/hide training parameters
+                if (action === 'train') {
+                    trainingParams.style.display = 'block';
+                } else {
+                    trainingParams.style.display = 'none';
+                }
+                
+                updateSubmitButton();
+            });
+        });
+        
+        // Model selection change handler
+        modelSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            
+            if (selectedOption.value) {
+                // Show model details
+                const modelText = selectedOption.text;
+                modelDetailsContent.innerHTML = `<strong>Model:</strong> ${modelText}`;
+                modelDetails.classList.remove('d-none');
+            } else {
+                modelDetails.classList.add('d-none');
+            }
+            
+            updateSubmitButton();
+        });
+        
+        // Dataset selection change handler
+        datasetSelect.addEventListener('change', updateSubmitButton);
+        
+        // Update submit button state
+        function updateSubmitButton() {
+            const hasModel = modelSelect.value !== '';
+            const hasDataset = datasetSelect.value !== '';
+            const hasAction = document.querySelector('.action-radio:checked') !== null;
+            
+            submitBtn.disabled = !(hasModel && hasDataset && hasAction);
+            
+            // Update button text based on selected action
+            const selectedAction = document.querySelector('.action-radio:checked');
+            if (selectedAction) {
+                const actionText = {
+                    'train': 'Load Model and Continue Training',
+                    'validate': 'Load Model and Validate',
+                    'test': 'Load Model and Test'
+                };
+                submitBtn.innerHTML = `<i class="fas fa-folder-open me-1"></i>${actionText[selectedAction.value]}`;
+            }
+        }
+        
+        // Form submission handler
+        form.addEventListener('submit', function(e) {
+            const model = modelSelect.value;
+            const dataset = datasetSelect.value;
+            const action = document.querySelector('.action-radio:checked');
+            
+            if (!model || !dataset || !action) {
+                e.preventDefault();
+                alert('Please select a model, dataset, and action before proceeding.');
+                return false;
+            }
+            
+            // Validation for training action
+            if (action.value === 'train') {
+                const startEpoch = document.getElementById('{{ form.startEpoch.id_for_label }}').value;
+                const numEpochs = document.getElementById('{{ form.numEpochs.id_for_label }}').value;
+                
+                if (!startEpoch || !numEpochs) {
+                    e.preventDefault();
+                    alert('Please specify start epoch and total epochs for continued training.');
+                    return false;
+                }
+                
+                if (parseInt(startEpoch) >= parseInt(numEpochs)) {
+                    e.preventDefault();
+                    alert('Total epochs must be greater than start epoch.');
+                    return false;
+                }
+            }
+            
+            const modelText = modelSelect.options[modelSelect.selectedIndex].text;
+            const datasetText = datasetSelect.options[datasetSelect.selectedIndex].text;
+            const actionText = {
+                'train': 'continue training',
+                'validate': 'validate',
+                'test': 'test'
+            };
+            
+            if (!confirm(`Load model "${modelText}" and ${actionText[action.value]} on dataset "${datasetText}"?\n\nThis process will run in the background.`)) {
+                e.preventDefault();
+                return false;
+            }
+            
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading Model...';
+            submitBtn.disabled = true;
+        });
+        
+        // Initial state
+        updateSubmitButton();
+    });
+</script>
+{% endblock %}

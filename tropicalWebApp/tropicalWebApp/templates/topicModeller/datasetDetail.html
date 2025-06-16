@@ -1,0 +1,294 @@
+<!-- templates/topicModeller/dataset_detail.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block page_title %}{{ dataset.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'datasetList' %}">Datasets</a></li>
+<li class="breadcrumb-item active">{{ dataset.name }}</li>
+{% endblock %}
+
+{% block toolbar %}
+<a href="{% url 'datasetList' %}" class="btn btn-secondary me-2">
+    <i class="fas fa-arrow-left me-1"></i>Back to Datasets
+</a>
+{% if not dataset.isPreprocessed %}
+    <a href="{% url 'preprocessDataset' dataset.pk %}" class="btn btn-primary">
+        <i class="fas fa-cogs me-1"></i>Preprocess Dataset
+    </a>
+{% else %}
+    <a href="{% url 'trainingNew' %}" class="btn btn-success">
+        <i class="fas fa-brain me-1"></i>Start Training
+    </a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Dataset Overview -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Dataset Overview</h5>
+                {% if dataset.isPreprocessed %}
+                    <span class="badge bg-success">Preprocessed</span>
+                {% else %}
+                    <span class="badge bg-warning">Not Preprocessed</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Basic Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Name:</strong></td>
+                                <td>{{ dataset.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Created:</strong></td>
+                                <td>{{ dataset.createdAt|date:"M d, Y H:i" }}</td>
+                            </tr>
+                            {% if dataset.uploadedFile %}
+                            <tr>
+                                <td><strong>File:</strong></td>
+                                <td><code>{{ dataset.uploadedFile.name }}</code></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td><strong>Location:</strong></td>
+                                <td><code>{{ dataset.location }}</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Filename:</strong></td>
+                                <td><code>{{ dataset.filename }}</code></td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Processing Statistics</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Status:</strong></td>
+                                <td>
+                                    {% if dataset.isPreprocessed %}
+                                        <span class="badge bg-success">Preprocessed</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Pending Preprocessing</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Vocabulary Size:</strong></td>
+                                <td>
+                                    {% if dataset.vocabSize %}
+                                        {{ dataset.vocabSize|floatformat:0 }} words
+                                    {% else %}
+                                        <span class="text-muted">Not calculated</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Number of Batches:</strong></td>
+                                <td>
+                                    {% if dataset.numBatches %}
+                                        {{ dataset.numBatches }} batches
+                                    {% else %}
+                                        <span class="text-muted">Not calculated</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if not dataset.isPreprocessed %}
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Next Step:</strong> This dataset needs to be preprocessed before it can be used for training. 
+                        Preprocessing includes sentiment analysis, text cleaning, and TF-IDF calculation.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Training Runs -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Training Runs Using This Dataset</h5>
+                {% if dataset.isPreprocessed %}
+                    <a href="{% url 'trainingNew' %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>New Training
+                    </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if trainingRuns %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Run Name</th>
+                                    <th>Status</th>
+                                    <th>Epochs</th>
+                                    <th>Final Loss</th>
+                                    <th>Started</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for run in trainingRuns %}
+                                <tr>
+                                    <td><strong>{{ run.runName }}</strong></td>
+                                    <td>
+                                        <span class="badge {% if run.status == 'completed' %}bg-success{% elif run.status == 'running' %}bg-primary{% elif run.status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {{ run.status|capfirst }}
+                                        </span>
+                                    </td>
+                                    <td>{{ run.numEpochs }}</td>
+                                    <td>
+                                        {% if run.finalLoss %}
+                                            {{ run.finalLoss|floatformat:4 }}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ run.createdAt|date:"M d, Y" }}</td>
+                                    <td>
+                                        <a href="{% url 'trainingDetail' run.pk %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-brain fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No training runs for this dataset yet.</p>
+                        {% if dataset.isPreprocessed %}
+                            <a href="{% url 'trainingNew' %}" class="btn btn-primary">
+                                <i class="fas fa-play me-1"></i>Start First Training
+                            </a>
+                        {% else %}
+                            <p class="text-muted small">Preprocess the dataset first to enable training.</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <!-- Actions Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Actions</h6>
+            </div>
+            <div class="card-body">
+                {% if dataset.isPreprocessed %}
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'trainingNew' %}" class="btn btn-success">
+                            <i class="fas fa-brain me-2"></i>Start Training
+                        </a>
+                        <button class="btn btn-outline-info" disabled>
+                            <i class="fas fa-eye me-2"></i>View Preprocessing Results
+                        </button>
+                        <button class="btn btn-outline-warning" disabled>
+                            <i class="fas fa-download me-2"></i>Export Dataset
+                        </button>
+                    </div>
+                {% else %}
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'preprocessDataset' dataset.pk %}" class="btn btn-primary">
+                            <i class="fas fa-cogs me-2"></i>Preprocess Dataset
+                        </a>
+                        <button class="btn btn-outline-secondary" disabled>
+                            <i class="fas fa-edit me-2"></i>Edit Dataset
+                        </button>
+                    </div>
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <small>Training is not available until the dataset is preprocessed.</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- File Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">File Information</h6>
+            </div>
+            <div class="card-body">
+                {% if dataset.uploadedFile %}
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Original File:</strong></td>
+                            <td>{{ dataset.uploadedFile.name }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>File Size:</strong></td>
+                            <td>
+                                {% if dataset.uploadedFile.size %}
+                                    {{ dataset.uploadedFile.size|filesizeformat }}
+                                {% else %}
+                                    <span class="text-muted">Unknown</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Storage Location:</strong></td>
+                            <td><code class="small">{{ dataset.location }}</code></td>
+                        </tr>
+                    </table>
+                {% else %}
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Location:</strong></td>
+                            <td><code class="small">{{ dataset.location }}</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Filename:</strong></td>
+                            <td><code class="small">{{ dataset.filename }}</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Type:</strong></td>
+                            <td>External File</td>
+                        </tr>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Processing Info -->
+        {% if dataset.isPreprocessed %}
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Preprocessing Results</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-12 mb-3">
+                        <h4 class="text-primary">{{ dataset.vocabSize|floatformat:0 }}</h4>
+                        <small class="text-muted">Vocabulary Size</small>
+                    </div>
+                    <div class="col-6">
+                        <h5 class="text-info">{{ dataset.numBatches }}</h5>
+                        <small class="text-muted">Batches</small>
+                    </div>
+                    <div class="col-6">
+                        <h5 class="text-success">128</h5>
+                        <small class="text-muted">Batch Size</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

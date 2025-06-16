@@ -1,0 +1,371 @@
+<!-- templates/topicModeller/PARQUETSplitter.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block extra_css %}
+<style>
+    /* Info card styling */
+    .info-card {
+        border-left: 4px solid #0d6efd;
+        background-color: #f8f9fa;
+    }
+    
+    /* File info styling */
+    .file-info {
+        padding: 1rem;
+        border-radius: 0.375rem;
+        background-color: rgba(0, 123, 255, 0.1);
+        border: 1px solid rgba(0, 123, 255, 0.2);
+    }
+    
+    /* Progress styling */
+    .progress-container {
+        margin-top: 1rem;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.375rem;
+        border: 1px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block page_title %}Split Training Dataset{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'datasetList' %}">Datasets</a></li>
+<li class="breadcrumb-item active">Split Dataset</li>
+{% endblock %}
+
+{% block toolbar %}
+<a href="{% url 'datasetList' %}" class="btn btn-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Back to Datasets
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Split Training Dataset</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="split-form">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.uploadedFile.id_for_label }}" class="form-label">
+                            Select Training Dataset <span class="text-danger">*</span>
+                        </label>
+                        {{ form.uploadedFile }}
+                        {% if form.uploadedFile.errors %}
+                            <div class="text-danger small">{{ form.uploadedFile.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text">
+                            Select a PARQUET file containing your training dataset. Must contain a 'text' column.
+                        </div>
+                    </div>
+                    
+                    <!-- File information display -->
+                    <div id="file-info" class="file-info d-none">
+                        <h6><i class="fas fa-file-alt me-2"></i>Selected File</h6>
+                        <div id="file-details"></div>
+                        
+                        <div class="mt-3">
+                            <h6><i class="fas fa-cut me-2"></i>Split Configuration</h6>
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <i class="fas fa-graduation-cap text-primary fa-2x"></i>
+                                        <div class="fw-bold mt-2">Training Set</div>
+                                        <div class="text-muted">80% of data</div>
+                                        <div id="train-count" class="text-primary fw-bold">-</div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <i class="fas fa-clipboard-check text-success fa-2x"></i>
+                                        <div class="fw-bold mt-2">Validation Set</div>
+                                        <div class="text-muted">20% of data</div>
+                                        <div id="val-count" class="text-success fw-bold">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info info-card">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>What happens when you split?</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Your dataset will be randomly shuffled to ensure good distribution</li>
+                            <li>80% of the data becomes your training set (overwrites original file)</li>
+                            <li>20% of the data becomes your validation set (creates new file)</li>
+                            <li>The validation file will be named by replacing 'train' with 'validate' in the filename</li>
+                            <li>Both files maintain the same structure and format</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'datasetList' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
+                            <i class="fas fa-cut me-1"></i>Split Dataset
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Progress section (hidden initially) -->
+                <div id="progress-section" class="progress-container d-none">
+                    <h6><i class="fas fa-cogs me-2"></i>Processing Dataset</h6>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 100%">
+                            Splitting dataset...
+                        </div>
+                    </div>
+                    <div class="text-muted mt-2">
+                        Please wait whilst we shuffle and split your dataset.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Help Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-question-circle me-1"></i>Need Help?
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="helpAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#whatHappens">
+                                What exactly happens during splitting?
+                            </button>
+                        </h2>
+                        <div id="whatHappens" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li><strong>Shuffling:</strong> The dataset is randomly shuffled with a fixed seed for reproducibility</li>
+                                    <li><strong>Split Calculation:</strong> 80% of rows go to training, 20% to validation</li>
+                                    <li><strong>File Creation:</strong> Two separate PARQUET files are created</li>
+                                    <li><strong>Naming:</strong> Training file keeps original name, validation file uses 'validate' instead of 'train'</li>
+                                    <li><strong>Structure:</strong> Both files maintain identical column structure</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#fileRequirements">
+                                What are the file requirements?
+                            </button>
+                        </h2>
+                        <div id="fileRequirements" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <strong>Required:</strong>
+                                <ul>
+                                    <li>File must be in PARQUET format (.parquet extension)</li>
+                                    <li>Must contain a 'text' column with document content</li>
+                                    <li>Filename should contain 'train' for proper validation file naming</li>
+                                    <li>File must not be empty</li>
+                                </ul>
+                                <strong>Recommended:</strong>
+                                <ul>
+                                    <li>At least 100 rows for meaningful split</li>
+                                    <li>Good quality text data for better model training</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#afterSplitting">
+                                What can I do after splitting?
+                            </button>
+                        </h2>
+                        <div id="afterSplitting" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                After splitting, you can:
+                                <ul>
+                                    <li><strong>Preprocess:</strong> Run sentiment analysis, cleaning, and TF-IDF on both datasets</li>
+                                    <li><strong>Train Models:</strong> Use the training set to train your topic models</li>
+                                    <li><strong>Validate:</strong> Test model performance on the validation set</li>
+                                    <li><strong>Compare:</strong> Analyse differences between training and validation topics</li>
+                                </ul>
+                                <div class="alert alert-warning mt-3">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Important:</strong> The original training file will be overwritten with the 80% subset. 
+                                    Make sure to backup your file if you want to keep the original!
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('{{ form.uploadedFile.id_for_label }}');
+        const fileInfo = document.getElementById('file-info');
+        const fileDetails = document.getElementById('file-details');
+        const trainCount = document.getElementById('train-count');
+        const valCount = document.getElementById('val-count');
+        const submitBtn = document.getElementById('submit-btn');
+        const form = document.getElementById('split-form');
+        const progressSection = document.getElementById('progress-section');
+        
+        // Configure file input for PARQUET only
+        fileInput.accept = '.parquet';
+        fileInput.multiple = false;
+        
+        // File validation and display
+        function validateAndDisplayFile() {
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                fileInfo.classList.add('d-none');
+                updateSubmitButton();
+                return true;
+            }
+            
+            // Validate file type
+            const extension = '.' + file.name.split('.').pop().toLowerCase();
+            if (extension !== '.parquet') {
+                alert('Please select a PARQUET file (.parquet extension).');
+                fileInput.value = '';
+                fileInfo.classList.add('d-none');
+                updateSubmitButton();
+                return false;
+            }
+            
+            // Validate file size (max 500MB)
+            const maxFileSize = 500 * 1024 * 1024;
+            if (file.size > maxFileSize) {
+                alert('File too large. Maximum size is 500MB.');
+                fileInput.value = '';
+                fileInfo.classList.add('d-none');
+                updateSubmitButton();
+                return false;
+            }
+            
+            // Check if filename contains 'train' for proper naming
+            if (!file.name.toLowerCase().includes('train')) {
+                const proceed = confirm(
+                    'Warning: Filename does not contain "train". The validation file may not be named as expected. Continue anyway?'
+                );
+                if (!proceed) {
+                    fileInput.value = '';
+                    fileInfo.classList.add('d-none');
+                    updateSubmitButton();
+                    return false;
+                }
+            }
+            
+            // Display file information
+            displayFileInfo(file);
+            updateSubmitButton();
+            return true;
+        }
+        
+        // Display file information and split preview
+        function displayFileInfo(file) {
+            const sizeInMB = (file.size / 1024 / 1024).toFixed(1);
+            const validationFileName = file.name.replace('train', 'validate');
+            
+            fileDetails.innerHTML = `
+                <div class="row">
+                    <div class="col-sm-6">
+                        <strong>Filename:</strong> ${file.name}
+                    </div>
+                    <div class="col-sm-6">
+                        <strong>Size:</strong> ${sizeInMB} MB
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <strong>Validation file will be named:</strong> 
+                        <code>${validationFileName}</code>
+                    </div>
+                </div>
+            `;
+            
+            trainCount.textContent = '~80% of rows';
+            valCount.textContent = '~20% of rows';
+            
+            fileInfo.classList.remove('d-none');
+        }
+        
+        // Update submit button state
+        function updateSubmitButton() {
+            const hasFile = fileInput.files.length > 0;
+            submitBtn.disabled = !hasFile;
+        }
+        
+        // File input change handler
+        fileInput.addEventListener('change', function() {
+            validateAndDisplayFile();
+        });
+        
+        // Form submission handler
+        form.addEventListener('submit', function(e) {
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                e.preventDefault();
+                alert('Please select a PARQUET file to split.');
+                return false;
+            }
+            
+            // Show confirmation dialog
+            const proceed = confirm(
+                `Are you sure you want to split "${file.name}"?\n\n` +
+                'This will:\n' +
+                '• Overwrite the original file with 80% of the data\n' +
+                '• Create a new validation file with 20% of the data\n' +
+                '• This action cannot be undone!'
+            );
+            
+            if (!proceed) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Show loading state and progress
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Splitting...';
+            submitBtn.disabled = true;
+            
+            // Hide form and show progress
+            document.querySelector('.card-body').style.opacity = '0.7';
+            progressSection.classList.remove('d-none');
+            
+            // For large files, show additional progress information
+            if (file.size > 50 * 1024 * 1024) {
+                const progressText = progressSection.querySelector('.text-muted');
+                progressText.innerHTML = `
+                    Processing large file (${(file.size / 1024 / 1024).toFixed(1)} MB).<br>
+                    This may take several minutes...
+                `;
+            }
+        });
+        
+        // Initialise the form
+        updateSubmitButton();
+        
+        // elpful tooltips
+        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltips.forEach(tooltip => {
+            new bootstrap.Tooltip(tooltip);
+        });
+    });
+</script>
+{% endblock %}
+*/

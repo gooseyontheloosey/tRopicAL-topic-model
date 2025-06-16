@@ -1,0 +1,458 @@
+<!-- templates/topicModeller/inferenceDetail.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block page_title %}Inference Results{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'visualiseTopics' %}">Visualise Topics</a></li>
+<li class="breadcrumb-item active">Results</li>
+{% endblock %}
+
+{% block toolbar %}
+<a href="{% url 'visualiseTopics' %}" class="btn btn-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Back to Visualisation
+</a>
+{% if inference.status == 'completed' and inference.resultsPath %}
+    <a href="#" class="btn btn-primary" onclick="downloadResults()">
+        <i class="fas fa-download me-1"></i>Download Results
+    </a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-eye me-2"></i>Topic Inference Results
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Status and Basic Info -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6>Model Information</h6>
+                        <p class="mb-1"><strong>Model:</strong> 
+                            <a href="{% url 'trainingDetail' inference.trainingRun.pk %}">{{ inference.trainingRun.runName }}</a>
+                        </p>
+                        <p class="mb-1"><strong>Architecture:</strong> 
+                            {{ inference.trainingRun.hiddenDim1Size }} - {{ inference.trainingRun.hiddenDim2Size }} - {{ inference.trainingRun.latentDimSize }}
+                        </p>
+                        <p class="mb-0"><strong>Training Epochs:</strong> {{ inference.trainingRun.numEpochs }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Dataset Information</h6>
+                        <p class="mb-1"><strong>Dataset:</strong> 
+                            <a href="{% url 'datasetDetail' inference.dataset.pk %}">{{ inference.dataset.name }}</a>
+                        </p>
+                        <p class="mb-1"><strong>Vocab Size:</strong> {{ inference.dataset.vocabSize|default:"N/A" }}</p>
+                        <p class="mb-0"><strong>Batches:</strong> {{ inference.dataset.numBatches|default:"N/A" }}</p>
+                    </div>
+                </div>
+                
+                <!-- Status Display -->
+                <div class="alert {% if inference.status == 'completed' %}alert-success{% elif inference.status == 'running' %}alert-primary{% elif inference.status == 'failed' %}alert-danger{% else %}alert-secondary{% endif %}">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6 class="alert-heading mb-1">
+                                {% if inference.status == 'completed' %}
+                                    <i class="fas fa-check-circle me-2"></i>Inference Completed Successfully
+                                {% elif inference.status == 'running' %}
+                                    <i class="fas fa-spinner fa-spin me-2"></i>Inference In Progress
+                                {% elif inference.status == 'failed' %}
+                                    <i class="fas fa-times-circle me-2"></i>Inference Failed
+                                {% else %}
+                                    <i class="fas fa-hourglass-half me-2"></i>Inference Pending
+                                {% endif %}
+                            </h6>
+                            <p class="mb-0">
+                                <small>
+                                    Started: {{ inference.createdAt|date:"d/m/Y H:i:s" }}
+                                    {% if inference.completedAt %}
+                                        | Completed: {{ inference.completedAt|date:"d/m/Y H:i:s" }}
+                                    {% endif %}
+                                </small>
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            {% if inference.status == 'running' %}
+                                <button class="btn btn-sm btn-outline-light" onclick="location.reload()">
+                                    <i class="fas fa-sync-alt me-1"></i>Refresh Status
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if inference.status == 'completed' %}
+                    <!-- Performance Metrics -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Performance Metrics</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                {% if inference.totalLoss %}
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <h4 class="text-primary">{{ inference.totalLoss|floatformat:4 }}</h4>
+                                        <small class="text-muted">Total Loss</small>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if inference.coherenceScore %}
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <h4 class="text-success">{{ inference.coherenceScore|floatformat:3 }}</h4>
+                                        <small class="text-muted">Coherence Score</small>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if inference.diversityScore %}
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <h4 class="text-info">{{ inference.diversityScore|floatformat:3 }}</h4>
+                                        <small class="text-muted">Diversity Score</small>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            {% if not inference.totalLoss and not inference.coherenceScore and not inference.diversityScore %}
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-info-circle me-2"></i>Detailed metrics not available
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Topic Hierarchies -->
+                    {% if topicHierarchies %}
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-sitemap me-2"></i>Topic Hierarchies
+                                    <span class="badge bg-primary">{{ topicHierarchies|length }}</span>
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <small class="text-muted">
+                                        Hierarchical topic structure discovered by the model. Each hierarchy shows topics at different levels of granularity.
+                                    </small>
+                                </div>
+                                
+                                <!-- Topic Hierarchy Navigation -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <select class="form-select form-select-sm" id="hierarchySelector">
+                                            <option value="all">Show All Hierarchies</option>
+                                            {% for hierarchy in topicHierarchies %}
+                                                <option value="{{ hierarchy.id }}">
+                                                    Hierarchy {{ hierarchy.id }} ({{ hierarchy.levels }} levels, {{ hierarchy.totalWords }} words)
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 text-end">
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleCompactView()">
+                                            <i class="fas fa-compress-alt me-1"></i>Toggle Compact View
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Hierarchies Display -->
+                                <div id="hierarchiesContainer">
+                                    {% for hierarchy in topicHierarchies %}
+                                        <div class="hierarchy-item mb-4" data-hierarchy-id="{{ hierarchy.id }}">
+                                            {{ hierarchy.html|safe }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-exclamation-triangle fa-2x text-warning mb-3"></i>
+                                <h6>Topic Hierarchies Not Available</h6>
+                                <p class="text-muted">Topic hierarchies could not be loaded. The inference may still be processing or there may have been an issue generating the visualisation files.</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% elif inference.status == 'failed' %}
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
+                            <h5>Inference Failed</h5>
+                            <p class="text-muted">The topic inference process encountered an error and could not complete. Please check the logs for more information or try running the inference again.</p>
+                            <a href="{% url 'visualiseTopics' %}" class="btn btn-primary">
+                                <i class="fas fa-redo me-1"></i>Try Again
+                            </a>
+                        </div>
+                    </div>
+                {% elif inference.status == 'running' %}
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                            <h5>Inference In Progress</h5>
+                            <p class="text-muted">The topic inference is currently running. This process may take several minutes depending on the dataset size. This page will automatically refresh.</p>
+                            <div class="progress mt-3">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'trainingDetail' inference.trainingRun.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-brain me-1"></i>View Original Model
+                    </a>
+                    <a href="{% url 'datasetDetail' inference.dataset.pk %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-database me-1"></i>View Dataset
+                    </a>
+                    <a href="{% url 'visualiseTopics' %}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-plus me-1"></i>New Visualisation
+                    </a>
+                    {% if inference.status == 'completed' and inference.resultsPath %}
+                        <button class="btn btn-outline-info btn-sm" onclick="showResultsPath()">
+                            <i class="fas fa-folder me-1"></i>Show Results Path
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Process Information -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Process Information</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row small">
+                    <dt class="col-sm-5">Started:</dt>
+                    <dd class="col-sm-7">{{ inference.createdAt|date:"d/m/Y H:i:s" }}</dd>
+                    
+                    {% if inference.completedAt %}
+                        <dt class="col-sm-5">Completed:</dt>
+                        <dd class="col-sm-7">{{ inference.completedAt|date:"d/m/Y H:i:s" }}</dd>
+                        
+                        <dt class="col-sm-5">Duration:</dt>
+                        <dd class="col-sm-7">
+                            {% widthratio inference.completedAt|timeuntil:inference.createdAt 1 60 %} minutes
+                        </dd>
+                    {% endif %}
+                    
+                    <dt class="col-sm-5">Status:</dt>
+                    <dd class="col-sm-7">
+                        <span class="badge bg-{% if inference.status == 'completed' %}success{% elif inference.status == 'running' %}primary{% elif inference.status == 'failed' %}danger{% else %}secondary{% endif %}">
+                            {{ inference.status|capfirst }}
+                        </span>
+                    </dd>
+                    
+                    {% if inference.resultsPath %}
+                        <dt class="col-sm-5">Results Path:</dt>
+                        <dd class="col-sm-7">
+                            <small class="text-muted font-monospace">{{ inference.resultsPath|truncatechars:30 }}</small>
+                        </dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .topic-hierarchy {
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: #fafafa;
+        font-family: Arial, sans-serif;
+    }
+    
+    .hierarchy-title {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+        font-weight: bold;
+    }
+    
+    .hierarchy-tree {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .hierarchy-level {
+        margin: 10px 0;
+    }
+    
+    .level-nodes {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .topic-node {
+        padding: 8px 12px;
+        border: 2px solid #333;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    
+    .topic-node:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .topic-word {
+        font-weight: bold;
+        font-size: 14px;
+        color: #333;
+    }
+    
+    .level-connector {
+        height: 30px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+    }
+    
+    .level-connector::before {
+        content: '';
+        position: absolute;
+        width: 2px;
+        height: 100%;
+        background-color: #666;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    /* Compact view */
+    .compact-view .topic-node {
+        padding: 4px 8px;
+    }
+    
+    .compact-view .topic-word {
+        font-size: 12px;
+    }
+    
+    .compact-view .level-connector {
+        height: 20px;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .level-nodes {
+            gap: 5px;
+        }
+        
+        .topic-node {
+            padding: 6px 10px;
+        }
+        
+        .topic-word {
+            font-size: 12px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const hierarchySelector = document.getElementById('hierarchySelector');
+        const hierarchyItems = document.querySelectorAll('.hierarchy-item');
+        
+        // Auto-refresh for running inference
+        {% if inference.status == 'running' %}
+            setTimeout(function() {
+                // Check status via API first
+                fetch('{% url "inferenceStatusApi" inference.pk %}')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status !== 'running') {
+                            location.reload();
+                        } else {
+                            // Refresh after another 30 seconds
+                            setTimeout(() => location.reload(), 30000);
+                        }
+                    })
+                    .catch(() => {
+                        // Fallback: refresh the page
+                        location.reload();
+                    });
+            }, 30000);
+        {% endif %}
+        
+        // Hierarchy selector functionality
+        if (hierarchySelector) {
+            hierarchySelector.addEventListener('change', function() {
+                const selectedId = this.value;
+                
+                hierarchyItems.forEach(item => {
+                    if (selectedId === 'all' || item.dataset.hierarchyId == selectedId) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+    
+    // Toggle compact view
+    function toggleCompactView() {
+        const container = document.getElementById('hierarchiesContainer');
+        if (container) {
+            container.classList.toggle('compact-view');
+        }
+    }
+    
+    // Show results path
+    function showResultsPath() {
+        const path = '{{ inference.resultsPath|escapejs }}';
+        alert(`Results saved to:\n${path}`);
+    }
+    
+    function downloadResults() {
+        // Will do later
+        alert('Download functionality would be implemented here.\nResults path: {{ inference.resultsPath|escapejs }}');
+    }
+    
+    // Copy path to clipboard
+    function copyPath() {
+        const path = '{{ inference.resultsPath|escapejs }}';
+        navigator.clipboard.writeText(path).then(function() {
+            // Show success message
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+            }, 2000);
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,297 @@
+<!-- templates/topicModeller/visualiseTopics.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block page_title %}Visualise Topics{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Visualise Topics</li>
+{% endblock %}
+
+{% block toolbar %}
+<a href="{% url 'viewModels' %}" class="btn btn-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Back to Models
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-eye me-2"></i>Visualise Topics
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if not modulesLoaded %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Error:</strong> Topic modelling modules are not available. Please check your setup.
+                    </div>
+                {% else %}
+                    <form method="post" id="visualiseForm">
+                        {% csrf_token %}
+                        
+                        <!-- Model Selection -->
+                        <div class="mb-4">
+                            <label for="{{ form.trainingRun.id_for_label }}" class="form-label">
+                                <i class="fas fa-brain me-1"></i>Select Trained Model <span class="text-danger">*</span>
+                            </label>
+                            {{ form.trainingRun }}
+                            {% if form.trainingRun.errors %}
+                                <div class="text-danger small">{{ form.trainingRun.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Only models marked as "Trained" are available for visualisation.
+                                {% if not form.trainingRun.queryset %}
+                                    <br><span class="text-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        No trained models available. Please <a href="{% url 'viewModels' %}">mark a completed model as trained</a> first.
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Dataset Selection -->
+                        <div class="mb-4">
+                            <label for="{{ form.dataset.id_for_label }}" class="form-label">
+                                <i class="fas fa-database me-1"></i>Select Dataset for Inference <span class="text-danger">*</span>
+                            </label>
+                            {{ form.dataset }}
+                            {% if form.dataset.errors %}
+                                <div class="text-danger small">{{ form.dataset.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Choose a preprocessed dataset to run topic inference on.
+                                {% if not form.dataset.queryset %}
+                                    <br><span class="text-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        No preprocessed datasets available. Please <a href="{% url 'datasetUpload' %}">upload and preprocess a dataset</a> first.
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Information Box -->
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-info-circle me-2"></i>What happens during topic visualisation?
+                            </h6>
+                            <ul class="mb-0">
+                                <li>The trained model will be loaded and applied to the selected dataset</li>
+                                <li>Topic hierarchies will be generated showing the discovered topic structure</li>
+                                <li>Performance metrics will be calculated on the inference data</li>
+                                <li>Results will be saved and can be viewed after completion</li>
+                                <li>The process runs in the background - you can close this page and check results later</li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Submit Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="button" class="btn btn-secondary me-md-2" onclick="window.history.back();">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary" id="startVisualisationBtn">
+                                <i class="fas fa-eye me-1"></i>Start Topic Visualisation
+                            </button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if recentInferences %}
+        <!-- Recent Inference Results -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-history me-1"></i>Recent Topic Visualisation Results
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Dataset</th>
+                                <th>Status</th>
+                                <th>Performance</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inference in recentInferences %}
+                            <tr>
+                                <td>
+                                    <small>{{ inference.trainingRun.runName }}</small>
+                                </td>
+                                <td>
+                                    <small>{{ inference.dataset.name }}</small>
+                                </td>
+                                <td>
+                                    {% if inference.status == 'completed' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i>Completed
+                                        </span>
+                                    {% elif inference.status == 'running' %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-spinner fa-spin me-1"></i>Running
+                                        </span>
+                                    {% elif inference.status == 'failed' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times-circle me-1"></i>Failed
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-hourglass-half me-1"></i>Pending
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if inference.totalLoss %}
+                                        <small>
+                                            Loss: {{ inference.totalLoss|floatformat:4 }}
+                                            {% if inference.coherenceScore %}
+                                                <br>Coherence: {{ inference.coherenceScore|floatformat:3 }}
+                                            {% endif %}
+                                        </small>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ inference.createdAt|date:"d/m/Y H:i" }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <a href="{% url 'inferenceDetail' inference.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Help Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-question-circle me-1"></i>Getting Started with Topic Visualisation
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Prerequisites</h6>
+                        <ul class="small">
+                            <li>At least one completed training run marked as "Trained"</li>
+                            <li>At least one preprocessed dataset</li>
+                            <li>Sufficient disk space for results storage</li>
+                        </ul>
+                        
+                        <h6>Model Selection Tips</h6>
+                        <ul class="small">
+                            <li>Choose models with good coherence and diversity scores</li>
+                            <li>Models trained for more epochs usually produce better topics</li>
+                            <li>Consider the dataset the model was originally trained on</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Dataset Considerations</h6>
+                        <ul class="small">
+                            <li>The dataset can be different from the training dataset</li>
+                            <li>Larger datasets will take longer to process</li>
+                            <li>Results quality depends on dataset content similarity</li>
+                        </ul>
+                        
+                        <h6>What You'll Get</h6>
+                        <ul class="small">
+                            <li>Topic hierarchies showing nested topics</li>
+                            <li>Performance metrics on the inference dataset</li>
+                            <li>Downloadable results for further analysis</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('visualiseForm');
+        const submitBtn = document.getElementById('startVisualisationBtn');
+        
+        // Model selection change handler
+        const modelSelect = document.getElementById('{{ form.trainingRun.id_for_label }}');
+        const datasetSelect = document.getElementById('{{ form.dataset.id_for_label }}');
+        
+        // Update submit button state
+        function updateSubmitButton() {
+            const hasModel = modelSelect.value !== '';
+            const hasDataset = datasetSelect.value !== '';
+            submitBtn.disabled = !(hasModel && hasDataset);
+        }
+        
+        // Attach event listeners
+        modelSelect.addEventListener('change', updateSubmitButton);
+        datasetSelect.addEventListener('change', updateSubmitButton);
+        
+        // Form submission handler
+        form.addEventListener('submit', function(e) {
+            const model = modelSelect.value;
+            const dataset = datasetSelect.value;
+            
+            if (!model || !dataset) {
+                e.preventDefault();
+                alert('Please select both a trained model and a dataset before starting visualisation.');
+                return false;
+            }
+            
+            // Get selected option text for confirmation
+            const modelText = modelSelect.options[modelSelect.selectedIndex].text;
+            const datasetText = datasetSelect.options[datasetSelect.selectedIndex].text;
+            
+            if (!confirm(`Start topic visualisation using model "${modelText}" on dataset "${datasetText}"?\n\nThis process will run in the background and may take some time to complete.`)) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Show loading state
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Starting Visualisation...';
+            submitBtn.disabled = true;
+            
+            // Show progress message
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'alert alert-info mt-3';
+            progressDiv.innerHTML = `
+                <i class="fas fa-spinner fa-spin me-2"></i>
+                <strong>Starting topic visualisation...</strong>
+                <br>You will be redirected to the results page once the process begins.
+            `;
+            form.appendChild(progressDiv);
+        });
+        
+        // Initial button state
+        updateSubmitButton();
+    });
+    
+    // Auto-refresh if there are running inferences
+    const runningInferences = document.querySelectorAll('.badge:contains("Running")');
+    if (runningInferences.length > 0) {
+        setTimeout(function() {
+            window.location.reload();
+        }, 30000);
+    }
+</script>
+{% endblock %}

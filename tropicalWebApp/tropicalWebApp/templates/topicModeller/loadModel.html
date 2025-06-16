@@ -1,0 +1,309 @@
+<!-- templates/topicModeller/modelLoad.html -->
+{% extends 'topicModeller/base.html' %}
+
+{% block page_title %}Load Existing Model{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Load Model</li>
+{% endblock %}
+
+{% block toolbar %}
+<a href="{% url 'trainingList' %}" class="btn btn-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Back to Training
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-folder-open me-2"></i>Load Existing Model
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="modelLoadForm">
+                    {% csrf_token %}
+                    
+                    <!-- Model Location -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Model Location</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.modelFolder.id_for_label }}" class="form-label">
+                                            {{ form.modelFolder.label }} <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.modelFolder }}
+                                        {% if form.modelFolder.errors %}
+                                            <div class="text-danger small">{{ form.modelFolder.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="form-text">
+                                            The subfolder name in "Saved Models" directory.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.modelFilename.id_for_label }}" class="form-label">
+                                            {{ form.modelFilename.label }} <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.modelFilename }}
+                                        {% if form.modelFilename.errors %}
+                                            <div class="text-danger small">{{ form.modelFilename.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="form-text">
+                                            The .pt model file to load.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Model Location Structure:</strong>
+                                <br>Models are stored in: <code>Saved Models/{subfolderName}/{modelFilename}.pt</code>
+                                <br>Example: <code>Saved Models/bbcnews-20250517_223535/tRopicAL-model-epoch-5.pt</code>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Selection -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Action to Perform</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="{{ form.action.id_for_label }}" class="form-label">
+                                    {{ form.action.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.action }}
+                                {% if form.action.errors %}
+                                    <div class="text-danger small">{{ form.action.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">
+                                    Choose what you want to do with the loaded model.
+                                </div>
+                            </div>
+                            
+                            <!-- Continue Training Options -->
+                            <div id="continueTrainingOptions" class="border rounded p-3 mb-3" style="display: none;">
+                                <h6 class="text-primary">Continue Training Options</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.startEpoch.id_for_label }}" class="form-label">
+                                                {{ form.startEpoch.label }}
+                                            </label>
+                                            {{ form.startEpoch }}
+                                            {% if form.startEpoch.errors %}
+                                                <div class="text-danger small">{{ form.startEpoch.errors.0 }}</div>
+                                            {% endif %}
+                                            <div class="form-text">Epoch to resume training from.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.totalEpochs.id_for_label }}" class="form-label">
+                                                {{ form.totalEpochs.label }}
+                                            </label>
+                                            {{ form.totalEpochs }}
+                                            {% if form.totalEpochs.errors %}
+                                                <div class="text-danger small">{{ form.totalEpochs.errors.0 }}</div>
+                                            {% endif %}
+                                            <div class="form-text">Total epochs to train to.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Unseen Data Options -->
+                            <div id="unseenDataOptions" class="border rounded p-3 mb-3" style="display: none;">
+                                <h6 class="text-warning">Unseen Data Options</h6>
+                                <div class="mb-3">
+                                    <label for="{{ form.unseenFilename.id_for_label }}" class="form-label">
+                                        {{ form.unseenFilename.label }}
+                                    </label>
+                                    {{ form.unseenFilename }}
+                                    {% if form.unseenFilename.errors %}
+                                        <div class="text-danger small">{{ form.unseenFilename.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Filename of the unseen corpus to process.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Descriptions -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Action Descriptions</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-success">Continue Training</h6>
+                                    <p class="small text-muted">
+                                        Resume training from a specific epoch with additional epochs.
+                                        Useful for fine-tuning or extending training time.
+                                    </p>
+                                    
+                                    <h6 class="text-primary">Validate</h6>
+                                    <p class="small text-muted">
+                                        Run validation on the loaded model to assess performance
+                                        on validation data and calculate topic metrics.
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-info">Test</h6>
+                                    <p class="small text-muted">
+                                        Evaluate the loaded model on test data to get
+                                        final performance metrics and topic quality scores.
+                                    </p>
+                                    
+                                    <h6 class="text-warning">Run on Unseen Data</h6>
+                                    <p class="small text-muted">
+                                        Apply the trained model to a new, unseen corpus
+                                        to extract topics and analyze new documents.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Buttons -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'trainingList' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary" id="loadModelBtn">
+                            <i class="fas fa-folder-open me-1"></i>Load Model and Proceed
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Help and Tips -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-question-circle me-1"></i>Tips for Loading Models
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Finding Model Files</h6>
+                        <ul class="small">
+                            <li>Check the "Saved Models" directory</li>
+                            <li>Look for timestamped subfolders</li>
+                            <li>Model files end with .pt extension</li>
+                            <li>Best models are saved as "best-coherence" or "best-diversity"</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Common Model Naming</h6>
+                        <ul class="small">
+                            <li><code>tRopicAL-model-epoch-X.pt</code> - Epoch checkpoint</li>
+                            <li><code>tRopicAL-model-epoch-X-best-coherence.pt</code> - Best coherence</li>
+                            <li><code>tRopicAL-model-epoch-X-best-diversity.pt</code> - Best diversity</li>
+                            <li><code>tRopicAL-model.pt</code> - Final model</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Show/hide options based on selected action
+    document.getElementById('{{ form.action.id_for_label }}').addEventListener('change', function() {
+        const action = this.value;
+        const continueOptions = document.getElementById('continueTrainingOptions');
+        const unseenOptions = document.getElementById('unseenDataOptions');
+        
+        // Hide all options
+        continueOptions.style.display = 'none';
+        unseenOptions.style.display = 'none';
+        
+        // Show relevant options
+        if (action === 'continue') {
+            continueOptions.style.display = 'block';
+        } else if (action === 'unseen') {
+            unseenOptions.style.display = 'block';
+        }
+    });
+    
+    // Form validation
+    document.getElementById('modelLoadForm').addEventListener('submit', function(e) {
+        const folder = document.getElementById('{{ form.modelFolder.id_for_label }}').value;
+        const filename = document.getElementById('{{ form.modelFilename.id_for_label }}').value;
+        const action = document.getElementById('{{ form.action.id_for_label }}').value;
+        
+        if (!folder || !filename || !action) {
+            e.preventDefault();
+            alert('Please fill in all required fields.');
+            return false;
+        }
+        
+        // Additional validation for continue training
+        if (action === 'continue') {
+            const startEpoch = document.getElementById('{{ form.startEpoch.id_for_label }}').value;
+            const totalEpochs = document.getElementById('{{ form.totalEpochs.id_for_label }}').value;
+            
+            if (!startEpoch || !totalEpochs) {
+                e.preventDefault();
+                alert('Please specify start epoch and total epochs for continue training.');
+                return false;
+            }
+        }
+        
+        // Additional validation for unseen data
+        if (action === 'unseen') {
+            const unseenFilename = document.getElementById('{{ form.unseenFilename.id_for_label }}').value;
+            
+            if (!unseenFilename) {
+                e.preventDefault();
+                alert('Please specify the unseen corpus filename.');
+                return false;
+            }
+        }
+        
+        // Show loading state
+        const submitBtn = document.getElementById('loadModelBtn');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading Model...';
+        submitBtn.disabled = true;
+        
+        // Confirmation for continue training
+        if (action === 'continue') {
+            const confirmed = confirm('Are you sure you want to continue training? This will resume the training process.');
+            if (!confirmed) {
+                e.preventDefault();
+                submitBtn.innerHTML = '<i class="fas fa-folder-open me-1"></i>Load Model and Proceed';
+                submitBtn.disabled = false;
+                return false;
+            }
+        }
+    });
+    
+    // Auto-format model folder input
+    document.getElementById('{{ form.modelFolder.id_for_label }}').addEventListener('blur', function() {
+        // Remove any leading/trailing slashes or whitespace
+        this.value = this.value.trim().replace(/^\/+|\/+$/g, '');
+    });
+    
+    // Auto-add .pt extension if not present
+    document.getElementById('{{ form.modelFilename.id_for_label }}').addEventListener('blur', function() {
+        if (this.value && !this.value.endsWith('.pt')) {
+            this.value += '.pt';
+        }
+    });
+</script>
+{% endblock %}

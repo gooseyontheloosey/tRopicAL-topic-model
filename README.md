@@ -5,44 +5,52 @@ A topic modelling tool, consisting of an originally designed topic model framewo
 - Conduct topic modelling
 
 
-# Application Requirements
+<br/>To run web app:
+- In a terminal, navigate to C:\Users\...\tRopicAL\tropicalWebApp\tropicalWebApp (folder where manage.py is)
+- Run the following: ```python manage.py makemigrations```, ```python manage.py migrate```, ```python manage.py runserver```
 
-## FRONT END FRAMEWORK
+
+<br/>If some features of web app are buggy // to run only backend code:
+- In a terminal, navigate to C:\Users\...\tRopicAL\tropicalWebApp\tropicalWebApp\topicModeller
+- Run ```python main.py``` and follow the prompts
+
+
+<br/># Application Requirements
+NOTE: A decently powerful GPU, plus ample RAM, is required to run this application on a local machine.
+
+### FRONT END FRAMEWORK
 Django>=4.2.0,<5.0.0
 
-## MACHINE LEARNING & DEEP LEARNING
+### MACHINE LEARNING & DEEP LEARNING
 torch>=2.1.0
 <br/>torchvision>=0.16.0
 <br/>scikit-learn>=1.3.0
 
-## NATURAL LANGUAGE PROCESSING
+### NATURAL LANGUAGE PROCESSING
 nltk>=3.8.1
 
-## DATA PROCESSING & ANALYSIS
+### DATA PROCESSING & ANALYSIS
 pandas>=2.0.0
 <br/>numpy>=1.24.0
 <br/>pyarrow>=12.0.0
 
-## DOCUMENT PROCESSING
+### DOCUMENT PROCESSING
 python-docx>=0.8.11
 
-## SYSTEM MONITORING & UTILITIES
+### SYSTEM MONITORING & UTILITIES
 psutil>=5.9.0
 
-## GUI AUTOMATION
+### GUI AUTOMATION
 pyautogui>=0.9.54
 
-## VISUALIZATION
+### VISUALIZATION
 matplotlib>=3.7.0
 
-## ADDITIONAL DEPENDENCIES
+### ADDITIONAL DEPENDENCIES
 Pillow>=10.0.0  # Image processing (required by Django and matplotlib)
 <br/>setuptools>=68.0.0  # Package management utilities
 
-
-# INDIVIDUAL PIP INSTALL COMMANDS
-## Copy and paste for individual installation:
-
+### pip installation commands:
 pip install "Django>=4.2.0,<5.0.0"
 <br/>pip install "torch>=2.1.0"
 <br/>pip install "torchvision>=0.16.0"
@@ -57,17 +65,3 @@ pip install "Django>=4.2.0,<5.0.0"
 <br/>pip install "matplotlib>=3.7.0"
 <br/>pip install "Pillow>=10.0.0"
 <br/>pip install "setuptools>=68.0.0"
-
-
-To run web app:
-- In a terminal, navigate to C:\Users\...\tRopicAL\tropicalWebApp\tropicalWebApp (folder where manage.py is)
-- Run the following: ```python manage.py makemigrations```, ```python manage.py migrate```, ```python manage.py runserver```
-
-
-If some features of web app are buggy // to run only backend code:
-- In a terminal, navigate to C:\Users\...\tRopicAL\tropicalWebApp\tropicalWebApp\topicModeller
-- Run ```python main.py``` and follow the prompts
-
-
-There will be saved models you can use to run in C:\Users\...\tRopicAL\tropicalWebApp\tropicalWebApp\Saved Models
-There will be datasets to use in C:\Users\...\tRopicAL\tropicalWebApp\tropicalWebApp\media\datasets (note: may not always show up in web app)

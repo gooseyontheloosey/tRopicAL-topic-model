@@ -13,10 +13,11 @@ A topic modelling tool, consisting of an originally designed topic model framewo
 <br/>If some features of web app are buggy // to run only backend code:
 - In a terminal, navigate to C:\Users\...\tRopicAL\tropicalWebApp\tropicalWebApp\topicModeller
 - Run ```python main.py``` and follow the prompts
+<br/>
 
 
-<br/># Application Requirements
-NOTE: A decently powerful GPU, plus ample RAM, is required to run this application on a local machine.
+# Application Requirements
+<b>NOTE: A decently powerful GPU, plus ample RAM, is required to run this application on a local machine.</b>
 
 ### FRONT END FRAMEWORK
 Django>=4.2.0,<5.0.0
